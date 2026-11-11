@@ -9,14 +9,23 @@ export const env = createEnv({
   server: {
     BETTER_AUTH_SECRET: z.string(),
     BETTER_AUTH_URL: z.string(),
+    RESEND_API_KEY: z.string().min(1).optional(),
+    AUTH_EMAIL_FROM: z.string().min(1).optional(),
+    TURNSTILE_SECRET_KEY: z.string().optional(),
+    GENERATION_API_TOKEN: z.string().optional(),
+    SIGNUPS_PER_IP_PER_24H: z.coerce.number().int().positive().default(3),
+    GENERATIONS_PER_IP_PER_DAY: z.coerce.number().int().positive().default(15),
+    GLOBAL_GENERATIONS_PER_DAY: z.coerce.number().int().positive().default(100),
+    DISPOSABLE_EMAIL_DOMAINS: z.string().optional(),
     DATABASE_URL: z.string().url(),
+    DIRECT_URL: z.string().url(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
     MODAL_KEY: z.string(),
     MODAL_SECRET: z.string(),
     AWS_ACCESS_KEY_ID: z.string(),
-    AWS_SECRET_ACCESS_KEY_ID: z.string(),
+    AWS_SECRET_ACCESS_KEY: z.string(),
     AWS_REGION: z.string(),
     S3_BUCKET_NAME: z.string(),
     GENERATE_FROM_DESCRIPTION: z.string(),
@@ -30,7 +39,7 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
   },
 
   /**
@@ -40,18 +49,28 @@ export const env = createEnv({
   runtimeEnv: {
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM,
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+    GENERATION_API_TOKEN: process.env.GENERATION_API_TOKEN,
+    SIGNUPS_PER_IP_PER_24H: process.env.SIGNUPS_PER_IP_PER_24H,
+    GENERATIONS_PER_IP_PER_DAY: process.env.GENERATIONS_PER_IP_PER_DAY,
+    GLOBAL_GENERATIONS_PER_DAY: process.env.GLOBAL_GENERATIONS_PER_DAY,
+    DISPOSABLE_EMAIL_DOMAINS: process.env.DISPOSABLE_EMAIL_DOMAINS,
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_URL: process.env.DIRECT_URL,
     NODE_ENV: process.env.NODE_ENV,
     MODAL_KEY: process.env.MODAL_KEY,
     MODAL_SECRET: process.env.MODAL_SECRET,
     AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-    AWS_SECRET_ACCESS_KEY_ID: process.env.AWS_SECRET_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY:
+      process.env.AWS_SECRET_ACCESS_KEY ?? process.env.AWS_SECRET_ACCESS_KEY_ID,
     AWS_REGION: process.env.AWS_REGION,
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
     GENERATE_FROM_DESCRIPTION: process.env.GENERATE_FROM_DESCRIPTION,
     GENERATE_FROM_DESCRIBED_LYRICS: process.env.GENERATE_FROM_DESCRIBED_LYRICS,
     GENERATE_WITH_LYRICS: process.env.GENERATE_WITH_LYRICS,
-    // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

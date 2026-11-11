@@ -1,32 +1,61 @@
 import { NonRetriableError } from "inngest";
 import { db } from "~/server/db";
-import { inngest } from "./client";
+import { generateSongEvent, inngest } from "./client";
 import { env } from "~/env";
+import { releaseSongQuota } from "~/lib/generation-quota";
+
+function getFailedSongId(event: unknown) {
+  if (typeof event !== "object" || event === null || !("data" in event)) {
+    return undefined;
+  }
+
+  const failureData = event.data;
+  if (
+    typeof failureData !== "object" ||
+    failureData === null ||
+    !("event" in failureData)
+  ) {
+    return undefined;
+  }
+
+  const originalEvent = failureData.event;
+  if (
+    typeof originalEvent !== "object" ||
+    originalEvent === null ||
+    !("data" in originalEvent)
+  ) {
+    return undefined;
+  }
+
+  const originalData = originalEvent.data;
+  if (
+    typeof originalData !== "object" ||
+    originalData === null ||
+    !("songId" in originalData) ||
+    typeof originalData.songId !== "string"
+  ) {
+    return undefined;
+  }
+
+  return originalData.songId;
+}
 
 export const generateSong = inngest.createFunction(
   {
     id: "generate-song",
-    concurrency: {
-      limit: 1,
-      key: "event.data.userId",
-    },
+    concurrency: [{ limit: 1, key: "event.data.userId" }, { limit: 2 }],
     onFailure: async ({ event, error }) => {
-      await db.song.update({
-        where: {
-          id: event?.data?.event?.data?.songId,
-        },
-        data: {
-          status: "failed",
-        },
+      const songId = getFailedSongId(event);
+      console.error("[generation] Inngest job failed", {
+        songId,
+        error,
       });
+      if (typeof songId === "string") await releaseSongQuota(songId);
     },
-    triggers: [{ event: "generate-song-event" }],
+    triggers: [{ event: generateSongEvent }],
   },
   async ({ event, step }) => {
-    const { songId } = event.data as {
-      songId: string;
-      userId: string;
-    };
+    const { songId } = event.data;
 
     const { userId, credits, endpoint, body } = await step.run(
       "check-credits",
@@ -83,17 +112,20 @@ export const generateSong = inngest.createFunction(
             full_described_song: song.fullDescribedSong,
             ...commonParams,
           };
-        } else if (song.lyrics && song.prompt) {
+        } else if (song.prompt && (song.lyrics?.trim() || song.instrumental)) {
           endpoint = env.GENERATE_WITH_LYRICS;
           body = {
-            lyrics: song.lyrics,
+            lyrics: song.lyrics ?? "",
             prompt: song.prompt,
             ...commonParams,
           };
-        } else if (song.describedLyrics && song.prompt) {
+        } else if (
+          song.prompt &&
+          (song.describedLyrics?.trim() || song.instrumental)
+        ) {
           endpoint = env.GENERATE_FROM_DESCRIBED_LYRICS;
           body = {
-            described_lyrics: song.describedLyrics,
+            described_lyrics: song.describedLyrics ?? "",
             prompt: song.prompt,
             ...commonParams,
           };
@@ -133,8 +165,17 @@ export const generateSong = inngest.createFunction(
           "Content-Type": "application/json",
           "Modal-Key": env.MODAL_KEY,
           "Modal-Secret": env.MODAL_SECRET,
+          Authorization: `Bearer ${env.GENERATION_API_TOKEN}`,
         },
       });
+
+      if (!response.ok) {
+        console.error("[generation] Music provider returned an error", {
+          songId,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      }
 
       await step.run("update-song-result", async () => {
         const responseData = response.ok
@@ -173,6 +214,12 @@ export const generateSong = inngest.createFunction(
         }
       });
 
+      if (!response.ok) {
+        await step.run("refund-failed-generation-slot", async () => {
+          await releaseSongQuota(songId);
+        });
+      }
+
       return await step.run("deduct-credits", async () => {
         if (!response.ok) return;
 
@@ -187,14 +234,7 @@ export const generateSong = inngest.createFunction(
       });
     } else {
       await step.run("set-status-no-credits", async () => {
-        return await db.song.update({
-          where: {
-            id: songId,
-          },
-          data: {
-            status: "no credits",
-          },
-        });
+        await releaseSongQuota(songId, "no credits");
       });
     }
   },

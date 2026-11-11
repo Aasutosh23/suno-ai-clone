@@ -1,119 +1,153 @@
 generator client {
-    provider = "prisma-client-js"
-    output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
-    id            String    @id
-    name          String
-    email         String
-    emailVerified Boolean   @default(false)
-    image         String?
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @updatedAt
-    sessions      Session[]
-    accounts      Account[]
-    credits       Int       @default(100)
-    likes         Like[]
-    songs         Song[]
+  id              String    @id
+  name            String
+  email           String
+  normalizedEmail String    @unique
+  emailVerified   Boolean   @default(false)
+  image           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  sessions        Session[]
+  accounts        Account[]
+  credits         Int       @default(100)
+  likes           Like[]
+  songs           Song[]
+  following       Follow[]  @relation("UserFollowing")
+  followers       Follow[]  @relation("UserFollowers")
 
-    @@unique([email])
-    @@map("user")
+  @@unique([email])
+  @@map("user")
 }
 
 model Song {
-    id                String     @id @default(cuid())
-    title             String
-    s3Key             String?
-    thumbnailS3Key    String?
-    status            String     @default("queued")
-    instrumental      Boolean    @default(false)
-    prompt            String?
-    lyrics            String?
-    fullDescribedSong String?
-    describedLyrics   String?
-    guidanceScale     Float?
-    inferStep         Float?
-    audioDuration     Float?
-    seed              Float?
-    published         Boolean    @default(false)
-    listenCount       Int        @default(0)
-    likes             Like[]
-    categories        Category[]
+  id                String     @id @default(cuid())
+  title             String
+  s3Key             String?
+  thumbnailS3Key    String?
+  status            String     @default("queued")
+  instrumental      Boolean    @default(false)
+  prompt            String?
+  lyrics            String?
+  fullDescribedSong String?
+  describedLyrics   String?
+  guidanceScale     Float?
+  inferStep         Float?
+  audioDuration     Float?
+  seed              Float?
+  published         Boolean    @default(false)
+  listenCount       Int        @default(0)
+  quotaUserKey      String?
+  quotaIpKey        String?
+  quotaGlobalKey    String?
+  quotaReleased     Boolean    @default(false)
+  likes             Like[]
+  categories        Category[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
 
-    @@index([s3Key])
+  @@index([s3Key])
 }
 
 model Category {
-    id    String @id @default(cuid())
-    name  String @unique
-    songs Song[]
+  id    String @id @default(cuid())
+  name  String @unique
+  songs Song[]
 }
 
 model Like {
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId String
-    songId String
-    Song   Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  songId String
+  Song   Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
 
-    @@id([userId, songId])
+  @@id([userId, songId])
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
 }
 
 model Session {
-    id        String   @id
-    expiresAt DateTime
-    token     String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    ipAddress String?
-    userAgent String?
-    userId    String
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([token])
-    @@index([userId])
-    @@map("session")
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
 }
 
 model Account {
-    id                    String    @id
-    accountId             String
-    providerId            String
-    userId                String
-    user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    accessToken           String?
-    refreshToken          String?
-    idToken               String?
-    accessTokenExpiresAt  DateTime?
-    refreshTokenExpiresAt DateTime?
-    scope                 String?
-    password              String?
-    createdAt             DateTime  @default(now())
-    updatedAt             DateTime  @updatedAt
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-    @@index([userId])
-    @@map("account")
+  @@index([userId])
+  @@map("account")
 }
 
 model Verification {
-    id         String   @id
-    identifier String
-    value      String
-    expiresAt  DateTime
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-    @@index([identifier])
-    @@map("verification")
+  @@index([identifier])
+  @@map("verification")
+}
+
+model QuotaCounter {
+  key       String   @id
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model SignupAttempt {
+  id        String   @id @default(cuid())
+  ipKey     String
+  createdAt DateTime @default(now())
+
+  @@index([ipKey, createdAt])
 }

@@ -1,10 +1,12 @@
 import os
+import hmac
 import threading
 import time
 import uuid
 from typing import List
 
 import modal
+from fastapi import HTTPException, Request
 from pydantic import BaseModel
 
 from prompts import LYRICS_GENERATOR_PROMPT, PROMPT_GENERATOR_PROMPT
@@ -66,6 +68,19 @@ class GenerateMusicResponseS3(BaseModel):
 def log(message: str):
     """Progress message from the cloud server."""
     print(f"[server] {message}", flush=True)
+
+
+def require_generation_token(request: Request):
+    expected_token = os.environ.get("GENERATION_API_TOKEN")
+    authorization = request.headers.get("authorization", "")
+    scheme, _, supplied_token = authorization.partition(" ")
+    if (
+        not expected_token
+        or scheme.lower() != "bearer"
+        or not supplied_token
+        or not hmac.compare_digest(supplied_token, expected_token)
+    ):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 # ---------- the server (runs on the cloud GPU) ----------
@@ -228,7 +243,8 @@ class MusicGenServer:
 
     # ----- simple test endpoint: saves the song in a volume, returns its name -----
     @modal.fastapi_endpoint(method="POST", requires_proxy_auth=True)
-    def generate(self):
+    def generate(self, request: Request):
+        require_generation_token(request)
         os.makedirs("/outputs", exist_ok=True)
         filename = f"{uuid.uuid4()}.wav"
 
@@ -247,40 +263,49 @@ class MusicGenServer:
 
     # ----- real endpoints (need S3 set up) -----
     @modal.fastapi_endpoint(method="POST", requires_proxy_auth=True)
-    def generate_from_description(self, request: GenerateFromDescriptionRequest):
-        prompt = self.generate_prompt(request.full_described_song)
+    def generate_from_description(
+        self, request: Request, body: GenerateFromDescriptionRequest
+    ):
+        require_generation_token(request)
+        prompt = self.generate_prompt(body.full_described_song)
 
         lyrics = ""
-        if not request.instrumental:
-            lyrics = self.generate_lyrics(request.full_described_song)
+        if not body.instrumental:
+            lyrics = self.generate_lyrics(body.full_described_song)
 
         return self.generate_and_upload_to_s3(
             prompt=prompt,
             lyrics=lyrics,
-            description_for_categorization=request.full_described_song,
-            **request.model_dump(exclude={"full_described_song"}),
+            description_for_categorization=body.full_described_song,
+            **body.model_dump(exclude={"full_described_song"}),
         )
 
     @modal.fastapi_endpoint(method="POST", requires_proxy_auth=True)
-    def generate_with_lyrics(self, request: GenerateWithCustomLyricsRequest):
+    def generate_with_lyrics(
+        self, request: Request, body: GenerateWithCustomLyricsRequest
+    ):
+        require_generation_token(request)
         return self.generate_and_upload_to_s3(
-            prompt=request.prompt,
-            lyrics=request.lyrics,
-            description_for_categorization=request.prompt,
-            **request.model_dump(exclude={"prompt", "lyrics"}),
+            prompt=body.prompt,
+            lyrics=body.lyrics,
+            description_for_categorization=body.prompt,
+            **body.model_dump(exclude={"prompt", "lyrics"}),
         )
 
     @modal.fastapi_endpoint(method="POST", requires_proxy_auth=True)
-    def generate_from_described_lyrics(self, request: GenerateWithDescribedLyricsRequest):
+    def generate_from_described_lyrics(
+        self, request: Request, body: GenerateWithDescribedLyricsRequest
+    ):
+        require_generation_token(request)
         lyrics = ""
-        if not request.instrumental:
-            lyrics = self.generate_lyrics(request.described_lyrics)
+        if not body.instrumental:
+            lyrics = self.generate_lyrics(body.described_lyrics)
 
         return self.generate_and_upload_to_s3(
-            prompt=request.prompt,
+            prompt=body.prompt,
             lyrics=lyrics,
-            description_for_categorization=request.prompt,
-            **request.model_dump(exclude={"described_lyrics", "prompt"}),
+            description_for_categorization=body.prompt,
+            **body.model_dump(exclude={"described_lyrics", "prompt"}),
         )
 
 

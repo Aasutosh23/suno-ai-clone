@@ -13,8 +13,19 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <AuthUIProvider
       authClient={authClient}
-      navigate={router.push}
-      replace={router.replace}
+      account={{ basePath: "/settings", fields: ["name"] }}
+      captcha={
+        process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
+          ? {
+              provider: "cloudflare-turnstile",
+              siteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+              endpoints: ["/sign-up/email"],
+            }
+          : undefined
+      }
+      localizeErrors={false}
+      navigate={(href) => router.push(href)}
+      replace={(href) => router.replace(href)}
       onSessionChange={() => {
         router.refresh();
       }}

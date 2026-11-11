@@ -22,13 +22,12 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${jakarta.variable} font-sans`}>
-      <body className="flex min-h-svh flex-col">
+      <body className="min-h-svh">
         <Providers>
-          <Toaster />
           {children}
+          <Toaster />
         </Providers>
       </body>
     </html>
   );
 }
-
