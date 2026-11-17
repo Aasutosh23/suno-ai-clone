@@ -10,14 +10,12 @@ export const generateSong = inngest.createFunction(
       limit: 1,
       key: "event.data.userId",
     },
-    onFailure: async ({ event, error }) => {
+    onFailure: async ({ event }) => {
+      const { songId } = event.data.event.data as { songId: string };
+
       await db.song.update({
-        where: {
-          id: event?.data?.event?.data?.songId,
-        },
-        data: {
-          status: "failed",
-        },
+        where: { id: songId },
+        data: { status: "failed" },
       });
     },
     triggers: [{ event: "generate-song-event" }],
