@@ -4,27 +4,25 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id              String    @id
-  name            String
-  email           String
-  normalizedEmail String    @unique
-  emailVerified   Boolean   @default(false)
-  image           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  sessions        Session[]
-  accounts        Account[]
-  credits         Int       @default(100)
-  likes           Like[]
-  songs           Song[]
-  following       Follow[]  @relation("UserFollowing")
-  followers       Follow[]  @relation("UserFollowers")
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  credits       Int       @default(100)
+  likes         Like[]
+  songs         Song[]
+  following     Follow[]  @relation("UserFollowing")
+  followers     Follow[]  @relation("UserFollowers")
 
   @@unique([email])
   @@map("user")
@@ -47,10 +45,6 @@ model Song {
   seed              Float?
   published         Boolean    @default(false)
   listenCount       Int        @default(0)
-  quotaUserKey      String?
-  quotaIpKey        String?
-  quotaGlobalKey    String?
-  quotaReleased     Boolean    @default(false)
   likes             Like[]
   categories        Category[]
 
@@ -136,18 +130,4 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
-}
-
-model QuotaCounter {
-  key       String   @id
-  count     Int      @default(0)
-  updatedAt DateTime @updatedAt
-}
-
-model SignupAttempt {
-  id        String   @id @default(cuid())
-  ipKey     String
-  createdAt DateTime @default(now())
-
-  @@index([ipKey, createdAt])
 }

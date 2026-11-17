@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
-import { Loader2, Music, Plus, ShieldAlert } from "lucide-react";
+import { Loader2, Music, Plus } from "lucide-react";
 import { Switch } from "../ui/switch";
 import { Badge } from "../ui/badge";
 import { toast } from "sonner";
 import {
   generateSong,
-  getGenerationQuota,
   type GenerateRequest,
 } from "~/actions/generation";
 import { useRouter } from "next/navigation";
@@ -35,13 +33,7 @@ const styleTags = [
   "Ambient pads",
 ];
 
-export function SongPanel({
-  initialRemaining,
-  emailVerified,
-}: {
-  initialRemaining: number;
-  emailVerified: boolean;
-}) {
+export function SongPanel() {
   const [mode, setMode] = useState<"simple" | "custom">("simple");
   const [description, setDescription] = useState("");
   const [instrumental, setInstrumental] = useState(false);
@@ -51,26 +43,7 @@ export function SongPanel({
 
   const [styleInput, setStyleInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [remaining, setRemaining] = useState(initialRemaining);
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const turnstileRef = useRef<TurnstileInstance>(null);
   const router = useRouter();
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      void getGenerationQuota()
-        .then((quota) => setRemaining(quota.remaining))
-        .catch((error) => {
-          console.error(
-            "[generation] Failed to refresh remaining quota",
-            error,
-          );
-        });
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   const handleStyleInputTagClick = (tag: string) => {
     const currentTags = styleInput
@@ -117,22 +90,6 @@ export function SongPanel({
       toast.error("Please add lyrics or describe the lyrics for your song.");
       return;
     }
-    if (!turnstileSiteKey) {
-      toast.error("Song generation bot protection is not configured.");
-      return;
-    }
-    if (!turnstileToken) {
-      toast.error("Complete the bot check before creating a song.");
-      return;
-    }
-    if (!emailVerified) {
-      toast.error("Verify your email address before creating songs.");
-      return;
-    }
-    if (remaining === 0) {
-      toast.error("You’ve reached your limit of 5 songs.");
-      return;
-    }
 
     let requestBody: GenerateRequest;
 
@@ -160,14 +117,12 @@ export function SongPanel({
 
     try {
       setLoading(true);
-      const result = await generateSong(requestBody, turnstileToken);
+      const result = await generateSong(requestBody);
       if (!result.ok) {
-        if (result.remaining !== undefined) setRemaining(result.remaining);
         toast.error(result.message);
         return;
       }
 
-      setRemaining(result.remaining);
       window.dispatchEvent(
         new CustomEvent("songs-queued", {
           detail: result.songs,
@@ -176,12 +131,8 @@ export function SongPanel({
       setDescription("");
       setLyrics("");
       setStyleInput("");
-      setTurnstileToken("");
-      turnstileRef.current?.reset();
       router.refresh();
-      toast.success(
-        `Songs added to your queue. ${result.remaining} of 5 songs remaining.`,
-      );
+      toast.success("Songs added to your queue.");
     } catch (error) {
       console.error("Failed to queue song generation:", error);
       toast.error("Failed to generate song. Please try again.");
@@ -193,20 +144,6 @@ export function SongPanel({
   return (
     <section className="bg-muted/30 flex w-full flex-col border-b lg:sticky lg:top-0 lg:h-[calc(100svh-3rem)] lg:max-h-[calc(100svh-3rem)] lg:min-h-0 lg:w-80 lg:shrink-0 lg:border-r lg:border-b-0">
       <div className="p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
-        <div className="bg-background/80 mb-4 rounded-lg border p-3">
-          <p className="text-sm font-semibold">
-            {remaining} of 5 songs remaining
-          </p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            This lifetime limit applies to every account, including paid users.
-          </p>
-        </div>
-        {!emailVerified && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
-            <p>Verify your email address before generating songs.</p>
-          </div>
-        )}
         <Tabs
           value={mode}
           onValueChange={(value) => setMode(value as "simple" | "custom")}
@@ -344,42 +281,13 @@ export function SongPanel({
       </div>
 
       <div className="bg-background/80 border-t p-4 lg:shrink-0">
-        {turnstileSiteKey ? (
-          <div className="mb-3 flex justify-center">
-            <Turnstile
-              ref={turnstileRef}
-              siteKey={turnstileSiteKey}
-              options={{ action: "generate" }}
-              onSuccess={setTurnstileToken}
-              onExpire={() => setTurnstileToken("")}
-              onError={() => {
-                setTurnstileToken("");
-                toast.error("Bot verification failed. Please retry.");
-              }}
-            />
-          </div>
-        ) : (
-          <p className="text-destructive mb-3 text-center text-xs">
-            Turnstile site key is not configured.
-          </p>
-        )}
         <Button
           onClick={handleCreate}
-          disabled={
-            loading ||
-            remaining === 0 ||
-            !emailVerified ||
-            !turnstileSiteKey ||
-            !turnstileToken
-          }
+          disabled={loading}
           className="w-full cursor-pointer bg-linear-to-r from-orange-500 to-pink-500 font-medium text-white hover:from-orange-600 hover:to-pink-600"
         >
           {loading ? <Loader2 className="animate-spin" /> : <Music />}
-          {loading
-            ? "Creating..."
-            : remaining === 0
-              ? "Limit reached"
-              : "Create"}
+          {loading ? "Creating..." : "Create"}
         </Button>
       </div>
     </section>
