@@ -149,7 +149,6 @@ DATABASE_URL="postgresql://user:password@localhost:5432/suno_clone"
 
 # better-auth secret
 BETTER_AUTH_SECRET="your-secret-here"
-BETTER_AUTH_URL="http://localhost:3000"
 
 # Password reset email (Resend)
 RESEND_API_KEY="your-resend-api-key"
