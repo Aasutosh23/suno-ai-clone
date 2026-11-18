@@ -11,9 +11,9 @@ import { toast } from "sonner";
 import {
   generateSong,
   getMyGenerationCount,
-  GENERATION_LIMIT,
   type GenerateRequest,
 } from "~/actions/generation";
+import { GENERATION_LIMIT } from "~/lib/generation-limits";
 import { useRouter } from "next/navigation";
 
 const inspirationTags = [

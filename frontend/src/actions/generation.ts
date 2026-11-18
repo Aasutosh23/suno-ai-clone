@@ -10,6 +10,11 @@ import { getSongTitle } from "~/lib/song-title";
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { env } from "~/env";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import {
+  GENERATION_LIMIT,
+  SONGS_PER_GENERATION,
+  TOTAL_SONGS_LIMIT,
+} from "~/lib/generation-limits";
 
 export interface GenerateRequest {
   prompt?: string;
@@ -79,10 +84,6 @@ async function createQueuedSongs(
 }
 
 // Each generation creates 2 song variants. 5 generations = 10 songs max.
-export const GENERATION_LIMIT = 5;
-const SONGS_PER_GENERATION = 2;
-const TOTAL_SONGS_LIMIT = GENERATION_LIMIT * SONGS_PER_GENERATION;
-
 export async function getUserGenerationCount(userId: string) {
   const count = await db.song.count({ where: { userId } });
   return {
