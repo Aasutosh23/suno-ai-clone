@@ -155,11 +155,12 @@ export function SongCard({ song }: { song: SongWithRelation }) {
 
   return (
     <article
-      className={`@container flex min-h-40 min-w-0 flex-col gap-2 rounded-2xl border bg-linear-to-br p-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:gap-3 sm:p-4 ${getCardColor(song.id)}`}
+      className={`@container flex min-h-0 min-w-0 flex-col gap-2 rounded-2xl border bg-linear-to-br p-2 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${getCardColor(song.id)}`}
     >
-      <div className="flex min-w-0 items-start gap-3">
+      {/* Artwork + Title */}
+      <div className="flex min-w-0 items-start gap-2">
         <SongArtwork
-          className="size-16 shrink-0 rounded-xl shadow-sm @min-[16rem]:size-20"
+          className="size-12 shrink-0 rounded-xl shadow-sm @min-[16rem]:size-16"
           src={song.thumbnailUrl}
           alt={`${song.title} artwork`}
         >
@@ -173,7 +174,7 @@ export function SongCard({ song }: { song: SongWithRelation }) {
 
         <div className="min-w-0 flex-1">
           <h3
-            className="line-clamp-2 text-sm leading-snug font-semibold wrap-break-word @min-[16rem]:text-base"
+            className="line-clamp-2 text-xs leading-snug font-semibold wrap-break-word @min-[16rem]:text-sm"
             title={song.title}
           >
             {song.title}
@@ -181,13 +182,14 @@ export function SongCard({ song }: { song: SongWithRelation }) {
         </div>
       </div>
 
-      <div className="flex min-w-0 items-center gap-2">
-        <Avatar className="size-6 sm:size-7">
+      {/* Creator row */}
+      <div className="flex min-w-0 items-center gap-1.5">
+        <Avatar className="size-5 shrink-0">
           <AvatarImage
             src={song.user.image ?? undefined}
             alt={song.user.name ?? "Creator"}
           />
-          <AvatarFallback>
+          <AvatarFallback className="text-[10px]">
             {(song.user.name && song.user.name.length > 0
               ? song.user.name
               : "C"
@@ -197,13 +199,13 @@ export function SongCard({ song }: { song: SongWithRelation }) {
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium">
+          <p className="truncate text-[11px] font-medium leading-tight">
             {song.user.name && song.user.name.length > 0
               ? song.user.name
               : "Unknown creator"}
           </p>
-          <p className="text-muted-foreground truncate text-[11px]">
-            {followersCount} followers · {song.user._count.following} following
+          <p className="text-muted-foreground truncate text-[10px] leading-tight">
+            {followersCount} followers
           </p>
         </div>
         {!song.isOwnSong && (
@@ -217,61 +219,64 @@ export function SongCard({ song }: { song: SongWithRelation }) {
                 : `Follow ${song.user.name ?? "creator"}`
             }
             onClick={() => void handleFollow()}
-            className="h-8 shrink-0 gap-1 px-2 text-xs sm:w-auto"
+            className="size-6 shrink-0 p-0"
           >
             {isFollowLoading ? (
-              <Loader2 className="animate-spin" />
+              <Loader2 className="size-3 animate-spin" />
             ) : isFollowing ? (
-              <UserCheck />
+              <UserCheck className="size-3" />
             ) : (
-              <UserPlus />
+              <UserPlus className="size-3" />
             )}
-            <span className="hidden sm:inline">
-              {isFollowing ? "Following" : "Follow"}
-            </span>
           </Button>
         )}
       </div>
 
-      <div className="flex min-h-5 flex-wrap gap-1.5">
+      {/* Tags */}
+      <div className="flex min-h-4 flex-wrap gap-1">
         {tags.length > 0 ? (
           tags.map((tag) => (
             <span
               key={tag}
-              className="max-w-full truncate rounded-full border border-white/70 bg-white/60 px-2.5 py-0.5 text-xs font-medium dark:border-white/10 dark:bg-white/10"
+              className="max-w-full truncate rounded-full border border-white/70 bg-white/60 px-2 py-0 text-[10px] font-medium dark:border-white/10 dark:bg-white/10"
             >
               {tag}
             </span>
           ))
         ) : (
-          <span className="text-muted-foreground text-xs">
-            {song.instrumental ? "Instrumental" : "No style tags"}
+          <span className="text-muted-foreground text-[10px]">
+            {song.instrumental ? "Instrumental" : "No tags"}
           </span>
         )}
       </div>
 
+      {/* Prompt description — hidden on very small cards */}
       {description && (
-        <p className="text-muted-foreground line-clamp-2 text-xs leading-relaxed">
+        <p className="text-muted-foreground line-clamp-1 hidden text-[10px] leading-relaxed @min-[14rem]:block">
           {description}
         </p>
       )}
 
-      <div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
+      {/* Type row */}
+      <div className="text-muted-foreground flex items-center justify-between gap-1 text-[10px]">
         <span className="truncate" suppressHydrationWarning>
           {timeAgo(song.createdAt)}
         </span>
-        <span className="flex shrink-0 items-center gap-1">
+        <span className="flex shrink-0 items-center gap-0.5">
           {song.instrumental ? (
-            <Music className="size-3.5" />
+            <Music className="size-3" />
           ) : (
-            <Mic className="size-3.5" />
+            <Mic className="size-3" />
           )}
-          {song.instrumental ? "Instrumental" : "Vocals"}
+          <span className="hidden @min-[12rem]:inline">
+            {song.instrumental ? "Instr." : "Vocals"}
+          </span>
         </span>
       </div>
 
-      <div className="mt-auto flex items-center gap-2 border-t border-black/10 pt-3 dark:border-white/10">
-        <span className="text-muted-foreground mr-auto text-xs">
+      {/* Footer: listens + like + play */}
+      <div className="mt-auto flex items-center gap-1 border-t border-black/10 pt-2 dark:border-white/10">
+        <span className="text-muted-foreground mr-auto text-[10px]">
           {song.listenCount} listens
         </span>
         <Button
@@ -279,24 +284,24 @@ export function SongCard({ song }: { song: SongWithRelation }) {
           size="sm"
           aria-label={isLiked ? "Unlike song" : "Like song"}
           onClick={() => void handleLike()}
-          className="gap-1 px-2"
+          className="h-7 gap-0.5 px-1.5"
         >
           <Heart
-            className={`size-4 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
+            className={`size-3.5 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
           />
-          <span className="text-xs">{likesCount}</span>
+          <span className="text-[10px]">{likesCount}</span>
         </Button>
         <Button
           size="icon"
           aria-label={`Play ${song.title}`}
           disabled={isLoading}
           onClick={() => void handlePlay()}
-          className="size-9 rounded-full"
+          className="size-7 rounded-full"
         >
           {isLoading ? (
-            <Loader2 className="size-4 animate-spin" />
+            <Loader2 className="size-3.5 animate-spin" />
           ) : (
-            <Play className="ml-0.5 size-4 fill-current" />
+            <Play className="ml-0.5 size-3.5 fill-current" />
           )}
         </Button>
       </div>

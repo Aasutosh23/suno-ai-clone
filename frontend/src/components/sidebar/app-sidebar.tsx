@@ -21,6 +21,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "~/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -46,6 +47,7 @@ interface AppSidebarProps {
 export function AppSidebar({ creditsSlot }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isMobile, setOpenMobile } = useSidebar();
   const { data: session } = authClient.useSession();
 
   const name = session?.user?.name ?? "User";
@@ -61,6 +63,13 @@ export function AppSidebar({ creditsSlot }: AppSidebarProps) {
         },
       },
     });
+  };
+
+  const handleMobileNav = (url: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+      setTimeout(() => router.push(url), 50);
+    }
   };
 
   return (
@@ -110,15 +119,22 @@ export function AppSidebar({ creditsSlot }: AppSidebarProps) {
               {accountItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    asChild
+                    asChild={!isMobile}
                     isActive={pathname.startsWith(item.url)}
-                    closeOnMobileClick
                     className="min-w-0 text-sm font-semibold"
+                    onClick={isMobile ? () => handleMobileNav(item.url) : undefined}
                   >
-                    <Link href={item.url}>
-                      <item.icon className="shrink-0" />
-                      <span className="truncate">{item.title}</span>
-                    </Link>
+                    {isMobile ? (
+                      <>
+                        <item.icon className="shrink-0" />
+                        <span className="truncate">{item.title}</span>
+                      </>
+                    ) : (
+                      <Link href={item.url}>
+                        <item.icon className="shrink-0" />
+                        <span className="truncate">{item.title}</span>
+                      </Link>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

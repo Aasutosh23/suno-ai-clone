@@ -11,7 +11,7 @@ export default async function ExplorePage() {
   if (!session) redirect("/auth/sign-in");
 
   return (
-    <div className="flex min-h-full w-full flex-col gap-6 p-8 pl-19">
+    <div className="flex min-h-full w-full flex-col gap-6 p-4 sm:p-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Explore</h1>
         <p className="text-muted-foreground mt-1 text-sm">

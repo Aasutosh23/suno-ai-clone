@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Compass, Home, Library, PlusCircle } from "lucide-react";
-import { SidebarMenuButton, SidebarMenuItem } from "~/components/ui/sidebar";
+import { useSidebar, SidebarMenuButton, SidebarMenuItem } from "~/components/ui/sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,21 +28,38 @@ const matches = (pathname: string, url: string) =>
 
 export default function SidebarMenuItems() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleMobileNav = (url: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+      // Small delay to let the sheet close animation start before navigating
+      setTimeout(() => router.push(url), 50);
+    }
+  };
 
   return (
     <>
       {mainItems.map((item) => (
         <SidebarMenuItem key={item.title}>
           <SidebarMenuButton
-            asChild
+            asChild={!isMobile}
             isActive={matches(pathname, item.url)}
-            closeOnMobileClick
             className="min-w-0 text-sm font-semibold"
+            onClick={isMobile ? () => handleMobileNav(item.url) : undefined}
           >
-            <Link href={item.url}>
-              <item.icon className="shrink-0" />
-              <span className="truncate">{item.title}</span>
-            </Link>
+            {isMobile ? (
+              <>
+                <item.icon className="shrink-0" />
+                <span className="truncate">{item.title}</span>
+              </>
+            ) : (
+              <Link href={item.url}>
+                <item.icon className="shrink-0" />
+                <span className="truncate">{item.title}</span>
+              </Link>
+            )}
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}

@@ -91,7 +91,7 @@ export default async function CreateSong() {
   );
   const hasNoPublishedSongs = songsWithUrls.length === 0;
   const songGridClass =
-    "mt-4 grid grid-cols-2 gap-3 sm:gap-4 lg:group-data-[state=expanded]/sidebar-wrapper:grid-cols-3 lg:group-data-[state=collapsed]/sidebar-wrapper:grid-cols-4";
+    "mt-4 grid grid-cols-2 gap-2 sm:gap-4 lg:group-data-[state=expanded]/sidebar-wrapper:grid-cols-3 lg:group-data-[state=collapsed]/sidebar-wrapper:grid-cols-4";
 
   return (
     <div className="space-y-6">

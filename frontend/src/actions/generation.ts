@@ -78,6 +78,31 @@ async function createQueuedSongs(
   }));
 }
 
+// Each generation creates 2 song variants. 5 generations = 10 songs max.
+export const GENERATION_LIMIT = 5;
+const SONGS_PER_GENERATION = 2;
+const TOTAL_SONGS_LIMIT = GENERATION_LIMIT * SONGS_PER_GENERATION;
+
+export async function getUserGenerationCount(userId: string) {
+  const count = await db.song.count({ where: { userId } });
+  return {
+    songsCount: count,
+    generationsUsed: Math.ceil(count / SONGS_PER_GENERATION),
+    generationsLeft: Math.max(
+      0,
+      GENERATION_LIMIT - Math.ceil(count / SONGS_PER_GENERATION),
+    ),
+    limitReached: count >= TOTAL_SONGS_LIMIT,
+  };
+}
+
+// Server action for the UI — fetches the current user's generation count
+export async function getMyGenerationCount() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) redirect("/auth/sign-in");
+  return getUserGenerationCount(session.user.id);
+}
+
 export async function generateSong(
   generateRequest: GenerateRequest,
 ): Promise<GenerateSongResult> {
@@ -85,6 +110,24 @@ export async function generateSong(
   const session = await auth.api.getSession({ headers: requestHeaders });
 
   if (!session) redirect("/auth/sign-in");
+
+  // ── Generation limit check ──────────────────────────────────────────────
+  const { limitReached, generationsUsed } = await getUserGenerationCount(
+    session.user.id,
+  );
+  if (limitReached) {
+    return {
+      ok: false,
+      message: `You've reached the ${GENERATION_LIMIT}-generation limit. Each account can generate up to ${GENERATION_LIMIT} songs.`,
+    };
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
+  console.info("[generation] Generation check passed", {
+    userId: session.user.id,
+    generationsUsed,
+    limit: GENERATION_LIMIT,
+  });
 
   let queued: Awaited<ReturnType<typeof createQueuedSongs>>;
   try {
